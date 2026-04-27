@@ -139,7 +139,7 @@ def main() -> None:
     p.add_argument("--data-dir", type=str, default="data/svhn")
     p.add_argument("--out-dir", type=str, default="checkpoints")
     p.add_argument("--results-dir", type=str, default="results")
-    p.add_argument("--epochs", type=int, default=1)
+    p.add_argument("--epochs", type=int, default=25)
     p.add_argument("--batch-size", type=int, default=128)
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--vgg-lr-backbone", type=float, default=1e-4)

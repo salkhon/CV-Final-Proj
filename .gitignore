@@ -217,6 +217,12 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Project data, checkpoints, experiment outputs
+data/
+checkpoints/
+results/
+graded_images/
+.DS_Store
 
 #Ignore cursor AI rules
 .cursor/rules/codacy.mdc

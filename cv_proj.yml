@@ -6,6 +6,10 @@
 # arm64 and linux) so `conda env create -f cv_proj.yml` works locally.
 # The project code uses standard PyTorch/torchvision APIs and remains compatible.
 #
+# PyTorch 2.0 + torchvision 0.15 pip wheels are built against NumPy 1.x. Conda may
+# otherwise pull NumPy 2.x, which breaks torch/torchvision ("Numpy is not available").
+# Pin NumPy<2 to match those wheels.
+#
 # Optional: to mirror the old Linux stack under Rosetta, use an x86_64 Miniconda
 # and you can try pinning python=3.8 and torch 1.10 from the pytorch channel.
 name: cv_proj
@@ -15,7 +19,7 @@ channels:
 dependencies:
   - python=3.10
   - pip
-  - numpy>=1.21
+  - numpy>=1.21,<2
   - scipy>=1.7
   - h5py>=3.5
   - cython>=0.29

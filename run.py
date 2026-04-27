@@ -6,6 +6,7 @@ graded_images/1.png ... graded_images/5.png. Single file; all paths relative to 
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 from typing import List
@@ -13,6 +14,7 @@ from typing import List
 import cv2
 import numpy as np
 import torch
+from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
@@ -23,6 +25,9 @@ from src.detection.pipeline import (  # noqa: E402
     preprocess_image,
 )
 from src.infer_utils import load_model_from_checkpoint  # noqa: E402
+from src.utils.run_logging import configure_logging, get_logger  # noqa: E402
+
+LOG = get_logger("cv_proj.run")
 
 
 def _resolve_checkpoint() -> Path:
@@ -92,16 +97,27 @@ def _fallback_synthetic() -> List[np.ndarray]:
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-v", "--verbose", action="count", default=0)
+    ap.add_argument("--no-progress", action="store_true")
+    args = ap.parse_args()
+    configure_logging(verbosity=args.verbose)
+
     if torch.cuda.is_available():
         dev = torch.device("cuda")
     else:
         dev = torch.device("cpu")
+    LOG.info("Step 1/2: load best checkpoint  device=%s", dev)
     ck = _resolve_checkpoint()
+    LOG.info("using checkpoint %s", ck)
     model, is_vgg, _ = load_model_from_checkpoint(ck, dev)
     out_dir = ROOT / "graded_images"
     out_dir.mkdir(parents=True, exist_ok=True)
     demo_dir = ROOT / "assets" / "demo_inputs"
-    for i in range(1, 6):
+    LOG.info("Step 2/2: run pipeline on 5 demo images -> %s", out_dir)
+    r = range(1, 6)
+    it = r if args.no_progress else tqdm(r, desc="run.py", unit="image")
+    for i in it:
         p = demo_dir / f"{i}.png"
         bgr: np.ndarray
         if p.is_file():
@@ -120,6 +136,7 @@ def main() -> None:
         dst = out_dir / f"{i}.png"
         if not cv2.imwrite(str(dst), vis):
             raise OSError(f"Failed to write {dst}")
+        LOG.info("wrote %s  pred=%r  boxes=%d", dst, pred, len(boxes))
 
 
 if __name__ == "__main__":

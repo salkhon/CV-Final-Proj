@@ -13,6 +13,14 @@ conda activate cv_proj
 
 If `conda env create` still fails, try: `conda install -c conda-forge mamba` then `mamba env create -f cv_proj.yml`.
 
+**NumPy 2.x vs PyTorch:** the pinned `torch` / `torchvision` pip packages expect **NumPy 1.x**. If you see `Numpy is not available` or `_ARRAY_API not found`, your conda pulled NumPy 2. Fix the active env with:
+
+`conda install -c conda-forge "numpy>=1.21,<2" --force-reinstall`
+
+Then continue (`bash scripts/run_all_experiments.sh` or `python train.py ...`).
+
+**Progress:** training, evaluation, data download, and `run.py` use **timestamped logging** and **tqdm** progress bars. Pass `-v` / `--verbose` on any of those Python scripts for more detail, or `--no-progress` to disable tqdm (logs only). The shell script `run_all_experiments.sh` prints numbered steps and sets `PYTHONUNBUFFERED=1` so log lines show up immediately.
+
 **Platform note:** all paths are built with `pathlib` relative to the project root. Use `cpu` on machines without a GPU: `--device cpu`.
 
 ## One-command experiment pipeline

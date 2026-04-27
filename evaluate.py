@@ -13,6 +13,7 @@ from typing import List
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
@@ -21,6 +22,9 @@ if str(ROOT) not in sys.path:
 from src.data.svhn_11 import NEGATIVE_CLASS, get_svhn_11_datasets  # noqa: E402
 from src.infer_utils import forward_batch, load_model_from_checkpoint  # noqa: E402
 from src.metrics import accuracy_from_logits  # noqa: E402
+from src.utils.run_logging import configure_logging, get_logger  # noqa: E402
+
+LOG = get_logger("cv_proj.evaluate")
 
 
 def per_class_acc(
@@ -29,12 +33,14 @@ def per_class_acc(
     device: torch.device,
     is_vgg: bool,
     num_classes: int = 10,
+    show_progress: bool = True,
 ) -> List[float]:
     model.eval()
     correct = [0] * num_classes
     total = [0] * num_classes
     with torch.no_grad():
-        for x, y in loader:
+        it = tqdm(loader, desc="per-class (test)", leave=False) if show_progress else loader
+        for x, y in it:
             x = x.to(device, non_blocking=True)
             y = y.to(device, non_blocking=True)
             # Only count digit classes 0-9 in test
@@ -67,8 +73,11 @@ def main() -> None:
     )
     p.add_argument("--neg-ratio", type=float, default=0.2)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("-v", "--verbose", action="count", default=0)
+    p.add_argument("--no-progress", action="store_true")
     args = p.parse_args()
 
+    configure_logging(verbosity=args.verbose)
     if args.device == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
@@ -84,7 +93,9 @@ def main() -> None:
     if not ck.is_file():
         raise FileNotFoundError(f"Missing checkpoint: {ck} — train that model first.")
 
+    LOG.info("Step 1/3: load checkpoint %s", ck)
     model, is_vgg, _ = load_model_from_checkpoint(ck, device)
+    LOG.info("Step 2/3: run test set (model=%s  device=%s)", model_name, device)
     _, _, test_ds = get_svhn_11_datasets(
         str(data_dir), neg_ratio=args.neg_ratio, seed=args.seed
     )
@@ -97,19 +108,32 @@ def main() -> None:
     tot_acc = 0.0
     n = 0
     model.eval()
+    prog = not args.no_progress
     with torch.no_grad():
-        for x, y in test_loader:
+        it = (
+            tqdm(test_loader, desc="test forward", unit="batch")
+            if prog
+            else test_loader
+        )
+        for x, y in it:
             x = x.to(device, non_blocking=True)
             y = y.to(device, non_blocking=True)
             logits = forward_batch(model, x, is_vgg)
             loss = criterion(logits, y)
             b = x.size(0)
-            tot_loss += loss.item() * b
-            tot_acc += accuracy_from_logits(logits, y) * b
+            li = loss.item()
+            ai = accuracy_from_logits(logits, y)
+            tot_loss += li * b
+            tot_acc += ai * b
             n += b
+            if prog and isinstance(it, tqdm):
+                it.set_postfix(loss=f"{li:.4f}", acc=f"{ai:.3f}")
     test_loss = tot_loss / max(n, 1)
     test_acc = tot_acc / max(n, 1)
-    pca = per_class_acc(model, test_loader, device, is_vgg, num_classes=10)
+    LOG.info("Step 3/3: per-class accuracies (digits 0-9)")
+    pca = per_class_acc(
+        model, test_loader, device, is_vgg, num_classes=10, show_progress=prog
+    )
 
     metrics = {
         "model": model_name,
@@ -135,7 +159,7 @@ def main() -> None:
         if write_header:
             w.writeheader()
         w.writerow(row)
-    print(f"Wrote {out_json}  test_acc={test_acc:.4f}")
+    LOG.info("wrote %s  test_acc=%.4f  comparison -> %s", out_json, test_acc, table_path)
 
 
 if __name__ == "__main__":

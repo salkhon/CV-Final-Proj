@@ -75,6 +75,12 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("-v", "--verbose", action="count", default=0)
     p.add_argument("--no-progress", action="store_true")
+    p.add_argument(
+        "--num-workers",
+        type=int,
+        default=0,
+        help="DataLoader workers (try 4–8 on Linux/WSL+GPU)",
+    )
     args = p.parse_args()
 
     configure_logging(verbosity=args.verbose)
@@ -82,6 +88,12 @@ def main() -> None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
         device = torch.device(args.device)
+    if device.type == "cuda":
+        LOG.info(
+            "CUDA: %s  torch=%s",
+            torch.cuda.get_device_name(0),
+            torch.__version__,
+        )
     root = Path(__file__).resolve().parent
     data_dir = (root / args.data_dir).resolve()
     ck_dir = root / args.checkpoints_dir
@@ -99,8 +111,14 @@ def main() -> None:
     _, _, test_ds = get_svhn_11_datasets(
         str(data_dir), neg_ratio=args.neg_ratio, seed=args.seed
     )
+    pin_mem = device.type == "cuda"
     test_loader = DataLoader(
-        test_ds, batch_size=args.batch_size, shuffle=False, num_workers=0
+        test_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+        pin_memory=pin_mem,
+        persistent_workers=args.num_workers > 0,
     )
 
     criterion = nn.CrossEntropyLoss()

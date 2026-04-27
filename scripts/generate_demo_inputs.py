@@ -3,12 +3,17 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.utils.fonts import truetype_font  # noqa: E402
 
 
 def _light_gradient(w: int, h: int, base: int) -> Image.Image:
@@ -25,36 +30,24 @@ def _make(i: int, w: int, h: int) -> Image.Image:
     if i == 0:
         im = _light_gradient(w, h, 60)
         dr = ImageDraw.Draw(im)
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 64)
-        except OSError:
-            font = ImageFont.load_default()
+        font = truetype_font(64)
         t = "42"
         dr.text((w // 2 - 20, h // 2 - 20), t, fill=(255, 200, 30), font=font)
     elif i == 1:
         im = _light_gradient(w, h, 80)
         dr = ImageDraw.Draw(im)
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 48)
-        except OSError:
-            font = ImageFont.load_default()
+        font = truetype_font(48)
         dr.text((40, 50), "7", fill=(20, 255, 200), font=font)
         im = im.rotate(12, resample=Image.BICUBIC, expand=False, fillcolor=(50, 50, 50))
     elif i == 2:
         im = _light_gradient(w, h, 30)
         dr = ImageDraw.Draw(im)
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 36)
-        except OSError:
-            font = ImageFont.load_default()
+        font = truetype_font(36)
         dr.text((w - 160, 20), "123", fill=(200, 200, 255), font=font)
     elif i == 3:
         im = _light_gradient(w, h, 15)
         dr = ImageDraw.Draw(im)
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 40)
-        except OSError:
-            font = ImageFont.load_default()
+        font = truetype_font(40)
         dr.text((50, 80), "5", fill=(250, 250, 250), font=font)
     else:
         im = _light_gradient(w, h, 50)
@@ -64,10 +57,7 @@ def _make(i: int, w: int, h: int) -> Image.Image:
         a = np.clip(a + noise, 0, 255).astype(np.uint8)
         im = Image.fromarray(a)
         dr = ImageDraw.Draw(im)
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 40)
-        except OSError:
-            font = ImageFont.load_default()
+        font = truetype_font(40)
         dr.text((50, 80), "99", fill=(180, 255, 180), font=font)
     return im
 

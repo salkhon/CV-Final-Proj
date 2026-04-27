@@ -23,6 +23,19 @@ Then continue (`bash scripts/run_all_experiments.sh` or `python train.py ...`).
 
 **Platform note:** all paths are built with `pathlib` relative to the project root. Use `cpu` on machines without a GPU: `--device cpu`.
 
+### Windows WSL + NVIDIA GPU (e.g. RTX 5080)
+
+The code is **Linux-oriented** (bash, `pathlib`); **WSL2 with Ubuntu** is the right place to run it, not legacy Windows `cmd` paths.
+
+1. **Clone the repo inside the Linux filesystem** (e.g. `~/projects/...`), not only under `/mnt/c/...`, so I/O and PyTorch are not unnecessarily slow.
+2. **NVIDIA driver on Windows** + WSL CUDA support: after `conda activate cv_proj`, check the GPU with:
+   `python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"`
+3. **New GPUs** may need a **newer PyTorch + CUDA** wheel than the pins in `cv_proj.yml` (torch 2.0.1). If CUDA is unavailable or the GPU is unrecognized, upgrade inside the env from [PyTorch’s install page](https://pytorch.org/get-started/locally/) (pick Linux + CUDA matching your driver), e.g. CUDA 12.4 wheels for recent cards. Keep **NumPy below 2.x** if you stay on older torch builds.
+4. **Faster dataloading:** pass `--num-workers 6` (or similar) to `train.py` / `evaluate.py`, or run the shell script with:
+   `NUM_WORKERS=6 DEVICE=cuda bash scripts/run_all_experiments.sh`
+   Training already uses **mixed precision on CUDA**, `pin_memory=True` when on GPU, and `non_blocking` transfers.
+5. **Demo image fonts:** [`src/utils/fonts.py`](src/utils/fonts.py) tries DejaVu/Liberation on Linux, Arial on Windows, and Helvetica on macOS so `scripts/generate_demo_inputs.py` works everywhere.
+
 ## One-command experiment pipeline
 
 From the project root (after `conda activate cv_proj`):
@@ -35,6 +48,7 @@ Optional environment variables:
 
 - `TRAIN_EPOCHS` (default `25`) – reduce for a quick test (e.g. `3`).
 - `DEVICE` (default `auto`) – `auto`, `cuda`, or `cpu`.
+- `NUM_WORKERS` (default `0`) – DataLoader workers; use `4`–`8` on WSL/Linux with a GPU for faster epoch iteration.
 
 Steps inside the script:
 

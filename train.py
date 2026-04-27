@@ -165,6 +165,12 @@ def main() -> None:
         action="store_true",
         help="disable tqdm batch bars (logs only)",
     )
+    p.add_argument(
+        "--num-workers",
+        type=int,
+        default=0,
+        help="DataLoader workers (0 is safest; try 4–8 on Linux/WSL+GPU for faster loading)",
+    )
     args = p.parse_args()
 
     configure_logging(verbosity=args.verbose)
@@ -172,6 +178,16 @@ def main() -> None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
         device = torch.device(args.device)
+    if device.type == "cuda":
+        LOG.info(
+            "CUDA device: %s  (%s)  torch=%s cuda=%s",
+            torch.cuda.get_device_name(0),
+            torch.cuda.get_device_capability(0),
+            torch.__version__,
+            torch.version.cuda,
+        )
+    else:
+        LOG.info("device=cpu  torch=%s", torch.__version__)
 
     root = Path(__file__).resolve().parent
     data_dir = (root / args.data_dir).resolve()
@@ -191,14 +207,22 @@ def main() -> None:
     train_ds, val_ds, _ = get_svhn_11_datasets(
         str(data_dir), neg_ratio=args.neg_ratio, seed=args.seed
     )
+    pin_mem = device.type == "cuda"
     tr_loader = DataLoader(
         train_ds,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=0,
+        num_workers=args.num_workers,
+        pin_memory=pin_mem,
+        persistent_workers=args.num_workers > 0,
     )
     val_loader = DataLoader(
-        val_ds, batch_size=args.batch_size, shuffle=False, num_workers=0
+        val_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+        pin_memory=pin_mem,
+        persistent_workers=args.num_workers > 0,
     )
     LOG.info(
         "Loaded train=%d val=%d batches (bs=%d)",

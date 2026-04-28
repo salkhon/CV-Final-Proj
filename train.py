@@ -26,6 +26,7 @@ from src.data.svhn_11 import get_svhn_11_datasets  # noqa: E402
 from src.infer_utils import forward_batch  # noqa: E402
 from src.metrics import accuracy_from_logits  # noqa: E402
 from src.models import CustomCNN, build_vgg16_classifier, vgg_param_groups  # noqa: E402
+from src.utils.cuda_kernel_check import raise_if_cuda_kernels_missing  # noqa: E402
 from src.utils.run_logging import configure_logging, get_logger  # noqa: E402
 
 LOG = get_logger("cv_proj.train")
@@ -238,6 +239,7 @@ def main() -> None:
         args.vgg_lr_backbone if args.model == "vgg" else "n/a",
     )
     model, is_vgg = build_model(args.model, device)
+    raise_if_cuda_kernels_missing(device)
     criterion = nn.CrossEntropyLoss()
     if is_vgg:
         opt = optim.Adam(

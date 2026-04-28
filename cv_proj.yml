@@ -6,9 +6,13 @@
 # arm64 and linux) so `conda env create -f cv_proj.yml` works locally.
 # The project code uses standard PyTorch/torchvision APIs and remains compatible.
 #
-# PyTorch 2.0 + torchvision 0.15 pip wheels are built against NumPy 1.x. Conda may
-# otherwise pull NumPy 2.x, which breaks torch/torchvision ("Numpy is not available").
-# Pin NumPy<2 to match those wheels.
+# Pip torch/torchvision: 2.7+ for API compatibility and (on Linux) easier upgrade to
+# CUDA 12.8 wheels for RTX 50-series (sm_120). Conda may pull NumPy 2.x; many torch builds
+# still expect NumPy 1.x — pin NumPy<2 unless you verify your stack supports NumPy 2.
+#
+# Linux + NVIDIA Blackwell (RTX 5080/5090): after env create, run:
+#   bash scripts/upgrade_pytorch_cuda128.sh
+# so pip replaces wheels with cu128 builds (sm_120 is not in old cu117 binaries).
 #
 # Optional: to mirror the old Linux stack under Rosetta, use an x86_64 Miniconda
 # and you can try pinning python=3.8 and torch 1.10 from the pytorch channel.
@@ -26,8 +30,8 @@ dependencies:
   - setuptools
   - scikit-learn>=1.3
   - pip:
-    - torch==2.0.1
-    - torchvision==0.15.2
+    - torch==2.7.0
+    - torchvision==0.22.0
     - opencv-python==4.5.4.58
     - matplotlib>=3.3.0
     - tqdm>=4.60.0

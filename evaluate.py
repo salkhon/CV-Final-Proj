@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
 from src.data.svhn_11 import NEGATIVE_CLASS, get_svhn_11_datasets  # noqa: E402
 from src.infer_utils import forward_batch, load_model_from_checkpoint  # noqa: E402
 from src.metrics import accuracy_from_logits  # noqa: E402
+from src.utils.cuda_kernel_check import raise_if_cuda_kernels_missing  # noqa: E402
 from src.utils.run_logging import configure_logging, get_logger  # noqa: E402
 
 LOG = get_logger("cv_proj.evaluate")
@@ -107,6 +108,7 @@ def main() -> None:
 
     LOG.info("Step 1/3: load checkpoint %s", ck)
     model, is_vgg, _ = load_model_from_checkpoint(ck, device)
+    raise_if_cuda_kernels_missing(device)
     LOG.info("Step 2/3: run test set (model=%s  device=%s)", model_name, device)
     _, _, test_ds = get_svhn_11_datasets(
         str(data_dir), neg_ratio=args.neg_ratio, seed=args.seed

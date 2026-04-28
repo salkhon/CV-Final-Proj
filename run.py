@@ -25,6 +25,7 @@ from src.detection.pipeline import (  # noqa: E402
     preprocess_image,
 )
 from src.infer_utils import load_model_from_checkpoint  # noqa: E402
+from src.utils.cuda_kernel_check import raise_if_cuda_kernels_missing  # noqa: E402
 from src.utils.run_logging import configure_logging, get_logger  # noqa: E402
 
 LOG = get_logger("cv_proj.run")
@@ -111,6 +112,7 @@ def main() -> None:
     ck = _resolve_checkpoint()
     LOG.info("using checkpoint %s", ck)
     model, is_vgg, _ = load_model_from_checkpoint(ck, dev)
+    raise_if_cuda_kernels_missing(dev)
     out_dir = ROOT / "graded_images"
     out_dir.mkdir(parents=True, exist_ok=True)
     demo_dir = ROOT / "assets" / "demo_inputs"

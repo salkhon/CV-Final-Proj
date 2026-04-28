@@ -30,7 +30,9 @@ The code is **Linux-oriented** (bash, `pathlib`); **WSL2 with Ubuntu** is the ri
 1. **Clone the repo inside the Linux filesystem** (e.g. `~/projects/...`), not only under `/mnt/c/...`, so I/O and PyTorch are not unnecessarily slow.
 2. **NVIDIA driver on Windows** + WSL CUDA support: after `conda activate cv_proj`, check the GPU with:
    `python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"`
-3. **New GPUs** may need a **newer PyTorch + CUDA** wheel than the pins in `cv_proj.yml` (torch 2.0.1). If CUDA is unavailable or the GPU is unrecognized, upgrade inside the env from [PyTorch’s install page](https://pytorch.org/get-started/locally/) (pick Linux + CUDA matching your driver), e.g. CUDA 12.4 wheels for recent cards. Keep **NumPy below 2.x** if you stay on older torch builds.
+3. **RTX 50-series (Blackwell, e.g. 5080)** use **CUDA capability sm_120**. Older wheels such as `torch 2.0+cu117` only ship kernels up to about **sm_86**, which causes `no kernel image is available for execution on the device`. After `conda env create`, **always** install the CUDA 12.8 PyTorch build on Linux+NVIDIA:
+   `bash scripts/upgrade_pytorch_cuda128.sh`
+   (or `pip install --upgrade torch torchvision --index-url https://download.pytorch.org/whl/cu128`). Then confirm with `python -c "import torch; print(torch.__version__, torch.version.cuda)"` — you want a **cu128** build. Training/eval/`run.py` call a small GPU self-test and print this hint if kernels are missing. Keep **NumPy below 2.x** unless you verify your stack supports NumPy 2.
 4. **Faster dataloading:** pass `--num-workers 6` (or similar) to `train.py` / `evaluate.py`, or run the shell script with:
    `NUM_WORKERS=6 DEVICE=cuda bash scripts/run_all_experiments.sh`
    Training already uses **mixed precision on CUDA**, `pin_memory=True` when on GPU, and `non_blocking` transfers.
@@ -90,6 +92,8 @@ The assignment requires a single file **`run.py`** that writes **`graded_images/
 | `evaluate.py` | Test metrics |
 | `select_best.py` | Writes `results/best_model.txt` |
 | `run.py` | Grader entry |
+| `scripts/upgrade_pytorch_cuda128.sh` | Reinstall torch/torchvision for **RTX 50-series** (CUDA 12.8 / sm_120) |
+| `src/utils/cuda_kernel_check.py` | Fails fast with install hint if GPU kernels are missing |
 
 ## Report checklist (you generate the PDF)
 
